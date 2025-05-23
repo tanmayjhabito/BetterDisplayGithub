@@ -13,6 +13,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
   var isSleep: Bool = false
   var reconfigureID: Int = 0
   var skipReconfiguration = false
+  private var pendingDisplayOperations: [String: Any] = [:]
+  private var lastOperationTimestamp: Date = Date()
   let updaterController = SPUStandardUpdaterController(startingUpdater: false, updaterDelegate: UpdaterDelegate(), userDriverDelegate: nil)
   let menu = AppMenu()
 
@@ -241,6 +243,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
     }
   }
 
+  @objc func dummyRotation(_ sender: NSMenuItem) {
+    os_log("Received rotation change from tag %{public}@", type: .info, "\(sender.tag)")
+    guard sender.tag != 0 else {
+      return
+    }
+    let dummyNumber = (sender.tag >> 16) & 0xFFFF
+    let rotation = sender.tag & 0xFFFF
+    os_log("- Rotation change dummy %{public}@", type: .info, "\(dummyNumber)")
+    os_log("- Rotation change degrees %{public}@", type: .info, "\(rotation)")
+    if let dummy = DummyManager.getDummyByNumber(dummyNumber), let display = DisplayManager.getDisplayById(dummy.displayIdentifier) {
+      display.setRotation(Int(rotation))
+      self.menu.populateAppMenu()
+    }
+  }
+
   // MARK: *** Handlers - General dummy management
 
   @objc func connectAllDummies(_: AnyObject?) {
@@ -324,6 +341,25 @@ class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
       os_log("Display reconfiguration is forcefully skipped", type: .info)
       return
     }
+
+    let operationKey = "\(dispatchedReconfigureID)_\(Date().timeIntervalSince1970)"
+    pendingDisplayOperations[operationKey] = [
+      "id": dispatchedReconfigureID,
+      "force": force,
+      "timestamp": Date()
+    ]
+
+    let oldOperations = pendingDisplayOperations.filter { 
+      if let timestamp = $0.value as? [String: Any],
+         let opTimestamp = timestamp["timestamp"] as? Date {
+        return Date().timeIntervalSince(opTimestamp) > 5.0
+      }
+      return false
+    }
+    for key in oldOperations.keys {
+      pendingDisplayOperations.removeValue(forKey: key)
+    }
+
     if !force, dispatchedReconfigureID == 0 || self.isSleep {
       self.reconfigureID += 1
       os_log("Bumping reconfigureID to %{public}@", type: .info, String(self.reconfigureID))
@@ -342,6 +378,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
       DummyManager.connectDisconnectAssociatedDummies()
       self.menu.populateAppMenu()
       DummyManager.storeDummiesToPrefs()
+      
+      pendingDisplayOperations.removeValue(forKey: operationKey)
     }
   }
 

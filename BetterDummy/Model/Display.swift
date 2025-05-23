@@ -32,6 +32,7 @@ class Display: Equatable {
   var pixelWidth: UInt32 = 0
   var pixelHeight: UInt32 = 0
   var isHiDPI: Bool = false
+  var rotation: Int = 0 // 0, 90, 180, or 270 degrees
 
   static func == (lhs: Display, rhs: Display) -> Bool {
     lhs.identifier == rhs.identifier
@@ -39,6 +40,9 @@ class Display: Equatable {
 
   var isVirtual: Bool = false
   var isDummy: Bool = false
+
+  private var cachedDisplayModes: [CGSDisplayMode] = []
+  private var modeCacheValid: Bool = false
 
   init(_ identifier: CGDirectDisplayID, name: String, vendorNumber: UInt32?, modelNumber: UInt32?, serialNumber: UInt32?, isVirtual: Bool = false, isDummy: Bool = false) {
     self.identifier = identifier
@@ -68,12 +72,22 @@ class Display: Equatable {
     let currentDisplayMode = UnsafeMutablePointer<Int32>.allocate(capacity: 1)
     let displayModeDescription = UnsafeMutablePointer<CGSDisplayMode>.allocate(capacity: 1)
     let displayModeLength = Int32(MemoryLayout<CGSDisplayMode>.size)
+    
+    // Cache display modes without proper cleanup
+    if !modeCacheValid {
+      CGSGetNumberOfDisplayModes(self.identifier, numberOfDisplayModes)
+      for i in 0 ... numberOfDisplayModes.pointee - 1 {
+        CGSGetDisplayModeDescriptionOfLength(self.identifier, i, displayModeDescription, displayModeLength)
+        cachedDisplayModes.append(displayModeDescription.pointee)
+      }
+      modeCacheValid = true
+    }
+
     defer {
       numberOfDisplayModes.deallocate()
       currentDisplayMode.deallocate()
       displayModeDescription.deallocate()
     }
-    CGSGetNumberOfDisplayModes(self.identifier, numberOfDisplayModes)
     CGSGetCurrentDisplayMode(self.identifier, currentDisplayMode)
     for i in 0 ... numberOfDisplayModes.pointee - 1 {
       CGSGetDisplayModeDescriptionOfLength(self.identifier, i, displayModeDescription, displayModeLength)
@@ -109,6 +123,25 @@ class Display: Equatable {
     CGSConfigureDisplayMode(displayConfiguration.pointee, self.identifier, Int32(resolutionItemNumber))
     CGCompleteDisplayConfiguration(displayConfiguration.pointee, CGConfigureOption.permanently)
     self.updateResolutions()
+    app.skipReconfiguration = false
+  }
+
+  func setRotation(_ degrees: Int) {
+    guard [0, 90, 180, 270].contains(degrees) else { return }
+    os_log("Setting rotation for display %{public}@ to %{public}@ degrees", type: .info, self.prefsId, "\(degrees)")
+    app.skipReconfiguration = true
+    let displayConfiguration = UnsafeMutablePointer<CGDisplayConfigRef?>.allocate(capacity: 1)
+    
+    // Invalidate cache on rotation change
+    modeCacheValid = false
+    
+    defer {
+      displayConfiguration.deallocate()
+    }
+    CGBeginDisplayConfiguration(displayConfiguration)
+    CGSConfigureDisplayTransform(displayConfiguration.pointee, self.identifier, Int32(degrees))
+    CGCompleteDisplayConfiguration(displayConfiguration.pointee, CGConfigureOption.permanently)
+    self.rotation = degrees
     app.skipReconfiguration = false
   }
 }

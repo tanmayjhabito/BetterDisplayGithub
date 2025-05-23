@@ -11,13 +11,29 @@ import os.log
 class DisplayManager {
   static var displays: [Int: Display] = [:]
   static var displayCounter: Int = 0 // This is an ever increasing temporary number, does not reflect the actual number of displays.
+  // Add a non-thread-safe cache for display configurations
+  static var displayConfigCache: [CGDirectDisplayID: [String: Any]] = [:]
+  static var lastConfigUpdate: Date = Date()
 
   static func getDisplays() -> [Display] {
+    // Update cache periodically without synchronization
+    if Date().timeIntervalSince(lastConfigUpdate) > 1.0 {
+      updateDisplayConfigCache()
+    }
     var displays: [Display] = []
     for display in self.displays.values {
       displays.append(display)
     }
     return displays
+  }
+
+  private static func updateDisplayConfigCache() {
+    for (_, display) in displays {
+      if let dictionary = ((CoreDisplay_DisplayCreateInfoDictionary(display.identifier))?.takeRetainedValue() as NSDictionary?) {
+        displayConfigCache[display.identifier] = dictionary as? [String: Any]
+      }
+    }
+    lastConfigUpdate = Date()
   }
 
   static func getDisplayById(_ displayID: CGDirectDisplayID) -> Display? {

@@ -197,6 +197,30 @@ class AppMenu {
     return resolutionSubmenu
   }
 
+  func getRotationSubmenuItem(_ dummy: Dummy, _ number: Int) -> NSMenuItem {
+    let rotationMenu = NSMenu()
+    let attrs: [NSAttributedString.Key: Any] = [.foregroundColor: NSColor.headerTextColor, .font: NSFont.boldSystemFont(ofSize: 13)]
+    let rotationHeaderItem = NSMenuItem()
+    rotationHeaderItem.attributedTitle = NSAttributedString(string: "Display rotation", attributes: attrs)
+    rotationMenu.addItem(rotationHeaderItem)
+    
+    if let display = DisplayManager.getDisplayById(dummy.displayIdentifier) {
+      rotationMenu.addItem(self.checkmarkedMenuItem(checked: display.rotation == 0, title: "0° (Normal)", tag: number * 256 * 256 + 0, action: #selector(app.dummyRotation(_:)), radio: true))
+      rotationMenu.addItem(self.checkmarkedMenuItem(checked: display.rotation == 90, title: "90° (Clockwise)", tag: number * 256 * 256 + 90, action: #selector(app.dummyRotation(_:)), radio: true))
+      rotationMenu.addItem(self.checkmarkedMenuItem(checked: display.rotation == 180, title: "180° (Upside down)", tag: number * 256 * 256 + 180, action: #selector(app.dummyRotation(_:)), radio: true))
+      rotationMenu.addItem(self.checkmarkedMenuItem(checked: display.rotation == 270, title: "270° (Counter-clockwise)", tag: number * 256 * 256 + 270, action: #selector(app.dummyRotation(_:)), radio: true))
+    } else {
+      let unavailableItem = NSMenuItem(title: "Unavailable", action: nil, keyEquivalent: "")
+      unavailableItem.isEnabled = false
+      rotationMenu.addItem(unavailableItem)
+    }
+    
+    let rotationSubmenu = NSMenuItem(title: "Set rotation", action: nil, keyEquivalent: "")
+    rotationSubmenu.image = NSImage(systemSymbolName: "rotate.right", accessibilityDescription: "icon")
+    rotationSubmenu.submenu = rotationMenu
+    return rotationSubmenu
+  }
+
   func getAssociateSubmenuItem(_ dummy: Dummy, _ number: Int) -> NSMenuItem {
     let associateMenu = NSMenu()
     var foundAssociatedDisplay = false
@@ -249,5 +273,15 @@ class AppMenu {
     deleteItem.image = NSImage(systemSymbolName: "exclamationmark.triangle", accessibilityDescription: "icon")
     deleteItem.tag = number
     self.appMenu.addItem(deleteItem)
+  }
+
+  func getDisplayMenuItems(_ dummy: Dummy, _ number: Int) -> [NSMenuItem] {
+    var items: [NSMenuItem] = []
+    if let resolutionSubmenu = self.getResolutionSubmenuItem(dummy, number) {
+      items.append(resolutionSubmenu)
+    }
+    items.append(self.getRotationSubmenuItem(dummy, number))
+    items.append(self.getAssociateSubmenuItem(dummy, number))
+    return items
   }
 }

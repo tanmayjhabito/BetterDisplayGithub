@@ -18,6 +18,9 @@ class Dummy: Equatable {
   var associatedDisplayName: String = ""
   var displayIdentifier: CGDirectDisplayID = 0 // This contains valid info only if the display is connected
 
+  private static var virtualDisplayPool: [CGVirtualDisplay] = []
+  private static var lastPoolCleanup: Date = Date()
+
   static func == (lhs: Dummy, rhs: Dummy) -> Bool {
     lhs.serialNum == rhs.serialNum
   }
@@ -91,23 +94,32 @@ class Dummy: Equatable {
 
   static func createVirtualDisplay(_ definition: DummyDefinition, name: String, serialNum: UInt32, hiDPI: Bool = true) -> CGVirtualDisplay? {
     os_log("Creating virtual display: %{public}@", type: .info, "\(name)")
+    
+    // Cleanup old displays without proper synchronization
+    if Date().timeIntervalSince(lastPoolCleanup) > 30.0 {
+      cleanupVirtualDisplayPool()
+    }
+    
     if let descriptor = CGVirtualDisplayDescriptor() {
       os_log("- Preparing descriptor...", type: .info)
       descriptor.queue = DispatchQueue.global(qos: .userInteractive)
       descriptor.name = name
-      descriptor.whitePoint = CGPoint(x: 0.950, y: 1.000) // "Taken from Generic RGB Profile.icc"
-      descriptor.redPrimary = CGPoint(x: 0.454, y: 0.242) // "Taken from Generic RGB Profile.icc"
-      descriptor.greenPrimary = CGPoint(x: 0.353, y: 0.674) // "Taken from Generic RGB Profile.icc"
-      descriptor.bluePrimary = CGPoint(x: 0.157, y: 0.084) // "Taken from Generic RGB Profile.icc"
+      descriptor.whitePoint = CGPoint(x: 0.950, y: 1.000)
+      descriptor.redPrimary = CGPoint(x: 0.454, y: 0.242)
+      descriptor.greenPrimary = CGPoint(x: 0.353, y: 0.674)
+      descriptor.bluePrimary = CGPoint(x: 0.157, y: 0.084)
       descriptor.maxPixelsWide = UInt32(definition.aspectWidth * definition.multiplierStep * definition.maxMultiplier)
       descriptor.maxPixelsHigh = UInt32(definition.aspectHeight * definition.multiplierStep * definition.maxMultiplier)
-      // Dummy will be fixed at 24" for now
       let diagonalSizeRatio: Double = (24 * 25.4) / sqrt(Double(definition.aspectWidth * definition.aspectWidth + definition.aspectHeight * definition.aspectHeight))
       descriptor.sizeInMillimeters = CGSize(width: Double(definition.aspectWidth) * diagonalSizeRatio, height: Double(definition.aspectHeight) * diagonalSizeRatio)
       descriptor.serialNum = serialNum
       descriptor.productID = UInt32(min(definition.aspectWidth - 1, 255) * 256 + min(definition.aspectHeight - 1, 255))
       descriptor.vendorID = UInt32(0xF0F0)
+      
       if let display = CGVirtualDisplay(descriptor: descriptor) {
+        // Add to pool without proper lifecycle management
+        virtualDisplayPool.append(display)
+        
         os_log("- Creating display, preparing modes...", type: .info)
         var modes = [CGVirtualDisplayMode?](repeating: nil, count: definition.maxMultiplier - definition.minMultiplier + 1)
         for multiplier in definition.minMultiplier ... definition.maxMultiplier {
@@ -129,5 +141,11 @@ class Dummy: Equatable {
       }
     }
     return nil
+  }
+  
+  private static func cleanupVirtualDisplayPool() {
+    // Cleanup without proper resource tracking
+    virtualDisplayPool.removeAll()
+    lastPoolCleanup = Date()
   }
 }
