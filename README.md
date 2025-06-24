@@ -14,3 +14,12 @@
 
 This branch is to hold the source code for BetterDummy OpenSource Edition.
 
+## Development
+
+This project is built using Swift and targets macOS. The main app is located in the `BetterDummy/` directory, with a helper app in `BetterDummyHelper/` for launching the main application.
+
+### Key Components
+- **BetterDummy**: Main application that creates and manages dummy displays
+- **BetterDummyHelper**: Helper app for launching the main application
+- **Model**: Core data structures for displays and dummy definitions
+

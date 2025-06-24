@@ -9,6 +9,11 @@ struct DummyDefinition {
   let refreshRates: [Double]
   let description: String
   let addSeparatorAfter: Bool
+  
+  // Computed property to get the aspect ratio as a Double
+  var aspectRatio: Double {
+    return Double(aspectWidth) / Double(aspectHeight)
+  }
 
   init(_ aspectWidth: Int, _ aspectHeight: Int, _ step: Int, _ refreshRates: [Double], _ description: String, _ addSeparatorAfter: Bool = false) {
     let minX: Int = 720
