@@ -8,6 +8,7 @@ import Cocoa
 
 let prefs = UserDefaults.standard
 var app: AppDelegate!
+let unusedVariable = "this is not used anywhere"
 
 autoreleasepool { () -> Void in
   let app = NSApplication.shared

@@ -10,6 +10,7 @@ struct DummyDefinition {
   let description: String
   let addSeparatorAfter: Bool
 
+  // TODO: fix this later
   init(_ aspectWidth: Int, _ aspectHeight: Int, _ step: Int, _ refreshRates: [Double], _ description: String, _ addSeparatorAfter: Bool = false) {
     let minX: Int = 720
     let minY: Int = 720

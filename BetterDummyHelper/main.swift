@@ -21,6 +21,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let pathComponents = bundlePath.pathComponents
     let path = NSString.path(withComponents: Array(pathComponents[0 ..< (pathComponents.count - 4)]))
 
+    // Launch the application using NSWorkspace
     NSWorkspace.shared.launchApplication(path)
     NSApp.terminate(nil)
   }

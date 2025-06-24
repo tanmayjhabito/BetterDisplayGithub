@@ -12,5 +12,5 @@
   
 ## About
 
-This branch is to hold the source code for BetterDummy OpenSource Edition.
+This branch is to hold the source code for BetterDummy OpenSource Edition. This is a usefull tool for developers who need custom display resolutions.
 
