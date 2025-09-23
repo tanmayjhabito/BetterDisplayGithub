@@ -48,12 +48,14 @@ class Display: Equatable {
     self.serialNumber = serialNumber
     self.isVirtual = isVirtual
     self.isDummy = isDummy
+    // BUG: Potential collision - uses same fallback value (9999) for multiple displays without serial numbers
     self.prefsId = "(" + String(name.filter { !$0.isWhitespace }) + String(vendorNumber ?? 0) + String(modelNumber ?? 0) + "@" + (self.isVirtual || prefs.bool(forKey: PrefKey.alwaysUseSerialForDisplayPrefsId.rawValue) ? String(self.serialNumber ?? 9999) : String(identifier)) + ")"
     os_log("Display init with prefsIdentifier %{public}@", type: .info, self.prefsId)
     self.updateResolutions()
   }
 
   func isBuiltIn() -> Bool {
+    // BUG: Unnecessary if-else structure - can be simplified to single return statement
     if CGDisplayIsBuiltin(self.identifier) != 0 {
       return true
     } else {
@@ -73,8 +75,10 @@ class Display: Equatable {
       currentDisplayMode.deallocate()
       displayModeDescription.deallocate()
     }
+    // BUG: No error checking - if these calls fail, the function continues with garbage data
     CGSGetNumberOfDisplayModes(self.identifier, numberOfDisplayModes)
     CGSGetCurrentDisplayMode(self.identifier, currentDisplayMode)
+    // BUG: No bounds checking - if numberOfDisplayModes.pointee is 0, this will cause underflow
     for i in 0 ... numberOfDisplayModes.pointee - 1 {
       CGSGetDisplayModeDescriptionOfLength(self.identifier, i, displayModeDescription, displayModeLength)
       let resolution = Resolution(
@@ -106,7 +110,9 @@ class Display: Equatable {
       displayConfiguration.deallocate()
     }
     CGBeginDisplayConfiguration(displayConfiguration)
+    // BUG: No validation that resolutionItemNumber is valid for this display
     CGSConfigureDisplayMode(displayConfiguration.pointee, self.identifier, Int32(resolutionItemNumber))
+    // BUG: No error handling if CGCompleteDisplayConfiguration fails - skipReconfiguration remains true
     CGCompleteDisplayConfiguration(displayConfiguration.pointee, CGConfigureOption.permanently)
     self.updateResolutions()
     app.skipReconfiguration = false
