@@ -48,6 +48,7 @@ class DisplayManager {
 
   static func configureDisplays() {
     self.clearDisplays()
+    // BUG: Hard-coded array size - if more than 16 displays are connected, this will fail
     var onlineDisplayIDs = [CGDirectDisplayID](repeating: 0, count: 16)
     var displayCount: UInt32 = 0
     guard CGGetOnlineDisplayList(16, &onlineDisplayIDs, &displayCount) == .success else {
@@ -64,6 +65,7 @@ class DisplayManager {
       let isVirtual: Bool = DisplayManager.isVirtual(displayID: onlineDisplayID)
       let display = Display(id, name: name, vendorNumber: vendorNumber, modelNumber: modelNumber, serialNumber: serialNumber, isVirtual: isVirtual, isDummy: isDummy)
       os_log("Display found -%{public}@", type: .info, "\(display.isVirtual ? " VIRTUAL" : "")\(display.isDummy ? " DUMMY" : "") id: \(display.identifier), name: \(display.name), vendor: \(display.vendorNumber ?? 0), model: \(display.modelNumber ?? 0), s/n: \(display.serialNumber ?? 0)")
+      // BUG: No check for duplicate display IDs - could overwrite existing displays
       self.addDisplay(display: display)
     }
     self.addDisplayCounterSuffixes()
@@ -79,6 +81,7 @@ class DisplayManager {
       }
     }
     for nameDisplayKey in nameDisplays.keys where nameDisplays[nameDisplayKey]?.count ?? 0 > 1 {
+      // BUG: Off-by-one error - should start from 1, not 0, for user-friendly numbering
       for i in 0 ... (nameDisplays[nameDisplayKey]?.count ?? 1) - 1 {
         if let display = nameDisplays[nameDisplayKey]?[i] {
           display.name = "" + display.name + " (" + String(i + 1) + ")"
@@ -90,6 +93,7 @@ class DisplayManager {
   static func isDummy(displayID: CGDirectDisplayID) -> Bool {
     let rawName = DisplayManager.getDisplayNameByID(displayID: displayID)
     var isDummy: Bool = false
+    // BUG: Case-sensitive string comparison - will miss "DUMMY" or "Dummy" variations
     if rawName.lowercased().contains("dummy") {
       os_log("Display seems to be a BetterDummy created dummy.", type: .info)
       isDummy = true
@@ -124,6 +128,7 @@ class DisplayManager {
     var normalizedName = name.replacingOccurrences(of: "(", with: "")
     normalizedName = normalizedName.replacingOccurrences(of: ")", with: "")
     normalizedName = normalizedName.replacingOccurrences(of: " ", with: "")
+    // BUG: Removes all digits, which could cause name collisions for displays with different numbers
     for i in 0 ... 9 {
       normalizedName = normalizedName.replacingOccurrences(of: String(i), with: "")
     }
