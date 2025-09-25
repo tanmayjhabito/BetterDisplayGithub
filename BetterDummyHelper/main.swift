@@ -10,6 +10,7 @@ import Cocoa
 class AppDelegate: NSObject, NSApplicationDelegate {
   @available(macOS, deprecated: 11.00)
   func applicationDidFinishLaunching(_: Notification) {
+    // Remove "Helper" suffix to get the main app's bundle identifier
     let mainBundleID = Bundle.main.bundleIdentifier!.replacingOccurrences(of: "Helper", with: "")
 
     let bundlePath = Bundle.main.bundlePath as NSString
