@@ -15,6 +15,7 @@ struct DummyDefinition {
     let minY: Int = 720
     let maxX: Int = prefs.bool(forKey: PrefKey.enable16K.rawValue) ? 16384 : 8192
     let maxY: Int = prefs.bool(forKey: PrefKey.enable16K.rawValue) ? 16384 : 8192
+    // BUG: Division by zero risk - no validation that aspectWidth, aspectHeight, or step are not zero
     let minMultiplier = max(Int(ceil(Float(minX) / (Float(aspectWidth) * Float(step)))), Int(ceil(Float(minY) / (Float(aspectHeight) * Float(step)))))
     let maxMultiplier = min(Int(floor(Float(maxX) / (Float(aspectWidth) * Float(step)))), Int(floor(Float(maxY) / (Float(aspectHeight) * Float(step)))))
     self.init(aspectWidth, aspectHeight, minMultiplier, maxMultiplier, step, refreshRates, description, addSeparatorAfter)

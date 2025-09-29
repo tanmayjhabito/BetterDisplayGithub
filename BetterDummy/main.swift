@@ -6,6 +6,7 @@
 
 import Cocoa
 
+// BUG: Global mutable state - can be modified from anywhere, potential security risk
 let prefs = UserDefaults.standard
 var app: AppDelegate!
 
