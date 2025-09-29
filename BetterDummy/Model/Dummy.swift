@@ -25,6 +25,7 @@ class Dummy: Equatable {
   init(dummyDefinition: DummyDefinition, serialNum: UInt32 = 0, doConnect: Bool = true) {
     var storedSerialNum: UInt32 = serialNum
     if storedSerialNum == 0 {
+      // BUG: Potential collision - using full UInt32 range can cause collisions with existing displays
       storedSerialNum = UInt32.random(in: 0 ... UInt32.max)
     }
     self.dummyDefinition = dummyDefinition
@@ -39,6 +40,7 @@ class Dummy: Equatable {
   }
 
   func getMenuItemTitle() -> String {
+    // BUG: Truncates description - could lose important information for similar dummy types
     "\(self.dummyDefinition.description.components(separatedBy: " ").first ?? "") - #\(String(format: "%02X", self.serialNum))"
   }
 
@@ -79,6 +81,7 @@ class Dummy: Equatable {
   }
 
   func hasAssociatedDisplay() -> Bool {
+    // BUG: Unnecessary ternary operator - can be simplified to just return the boolean expression
     self.associatedDisplayPrefsId == "" ? false : true
   }
 
@@ -99,8 +102,9 @@ class Dummy: Equatable {
       descriptor.redPrimary = CGPoint(x: 0.454, y: 0.242) // "Taken from Generic RGB Profile.icc"
       descriptor.greenPrimary = CGPoint(x: 0.353, y: 0.674) // "Taken from Generic RGB Profile.icc"
       descriptor.bluePrimary = CGPoint(x: 0.157, y: 0.084) // "Taken from Generic RGB Profile.icc"
-      descriptor.maxPixelsWide = UInt32(definition.aspectWidth * definition.multiplierStep * definition.maxMultiplier)
-      descriptor.maxPixelsHigh = UInt32(definition.aspectHeight * definition.multiplierStep * definition.maxMultiplier)
+        // BUG: Potential integer overflow - no bounds checking on multiplication
+        descriptor.maxPixelsWide = UInt32(definition.aspectWidth * definition.multiplierStep * definition.maxMultiplier)
+        descriptor.maxPixelsHigh = UInt32(definition.aspectHeight * definition.multiplierStep * definition.maxMultiplier)
       // Dummy will be fixed at 24" for now
       let diagonalSizeRatio: Double = (24 * 25.4) / sqrt(Double(definition.aspectWidth * definition.aspectWidth + definition.aspectHeight * definition.aspectHeight))
       descriptor.sizeInMillimeters = CGSize(width: Double(definition.aspectWidth) * diagonalSizeRatio, height: Double(definition.aspectHeight) * diagonalSizeRatio)

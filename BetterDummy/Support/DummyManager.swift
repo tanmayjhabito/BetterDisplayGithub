@@ -28,12 +28,14 @@ class DummyManager {
   static func createDummy(_ dummyDefinition: DummyDefinition, dummyDefinitionId: Int? = nil, isPortrait _: Bool = false, serialNum: UInt32 = 0, doConnect: Bool = true) -> Int {
     let dummy = Dummy(dummyDefinition: dummyDefinition, serialNum: serialNum, doConnect: doConnect)
     self.dummyCounter += 1
+    // BUG: No check if dummyCounter overflows or if key already exists
     self.definedDummies[self.dummyCounter] = DefinedDummy(dummy: dummy, definitionId: dummyDefinitionId)
     return self.dummyCounter
   }
 
   static func getDummies() -> [Dummy] {
     var dummies: [Dummy] = []
+    // BUG: Inefficient - creates new array every time instead of returning references
     for definedDummy in self.definedDummies.values {
       dummies.append(definedDummy.dummy)
     }
@@ -45,7 +47,9 @@ class DummyManager {
   }
 
   static func discardAllDummies() {
+    // BUG: Memory leak - dummies are not properly disconnected before discarding
     self.definedDummies = [:]
+    // BUG: Resets counter to 0 - could cause ID collisions if new dummies are created immediately after
     self.dummyCounter = 0
   }
 
@@ -64,6 +68,7 @@ class DummyManager {
   static func connectDisconnectAssociatedDummies() {
     for dummy in self.getDummies() {
       if dummy.hasAssociatedDisplay() {
+        // BUG: Logic error - should check if display exists AND is connected, not just exists
         if DisplayManager.getDisplayByPrefsId(dummy.associatedDisplayPrefsId) != nil {
           if !dummy.isConnected {
             os_log("Connecting associated dummy %{public}@ for display %{public}@", type: .info, dummy.getName(), dummy.associatedDisplayPrefsId)
@@ -126,6 +131,7 @@ class DummyManager {
     guard prefs.integer(forKey: "numOfDummyDisplays") > 0 else {
       return
     }
+    // BUG: Potential crash - no validation of preference values, could be negative or extremely large
     for i in 1 ... prefs.integer(forKey: PrefKey.numOfDummyDisplays.rawValue) where prefs.object(forKey: "\(PrefKey.display.rawValue)\(i)") != nil {
       if let number = DummyManager.createDummyByDefinitionId(prefs.integer(forKey: "\(PrefKey.display.rawValue)\(i)"), serialNum: UInt32(prefs.integer(forKey: "\(PrefKey.serial.rawValue)\(i)")), doConnect: false) {
         if let dummy = DummyManager.getDummyByNumber(number) {
