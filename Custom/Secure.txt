@@ -1,0 +1,192 @@
+# Secure coding practices (OWASP Top 10)
+
+### 1. Validate all inputs (injection prevention)
+
+- Ensure all user inputs are validated, sanitized, or escaped before being used.
+- Use parameterized queries or prepared statements instead of string concatenation in SQL queries.
+
+Bad example:
+```js
+db.query(SELECT * FROM users WHERE username = ' + req.body.username + ')
+```
+
+Example of validating a username: Suppose we expect usernames 3–20 characters long, alphanumeric only. A secure check would be:
+
+```python
+import re
+
+def is_valid_username(name):
+    pattern = re.compile(r'^[A-Za-z0-9]{3,20}$')
+    return bool(pattern.match(name))
+
+user = validUser123
+print(Valid) if is_valid_username(user) else print(Invalid)
+```
+
+- Sanitize user inputs to prevent XSS, command injection, or LDAP injection.
+
+Good:
+```js
+db.query(SELECT * FROM users WHERE username = ?, [req.body.username])
+```
+
+- Use regular expressions safely to avoid Regular Expression Denial of Service (ReDoS).
+- Avoid using user-controlled data directly in system commands, `eval()`, or file operations.
+
+### 2. Implement secure authentication
+
+- Store passwords securely using hashing algorithms like bcrypt, Argon2, or PBKDF2 instead of plaintext.
+- Properly manage user sessions, avoiding session IDs in URLs and enforcing short-lived tokens.
+- Remove default credentials before deploying to production.
+- Display generic authentication error messages such as “Invalid credentials” instead of “Incorrect password.”
+
+### 3. Enforce strong access controls
+
+- Implement role-based access controls (RBAC) or attribute-based access controls (ABAC).
+- Ensure API endpoints enforce authorization, not just authentication.
+- Require additional authorization for sensitive actions like modifying permissions.
+- Store access tokens and API keys securely in environment variables or secrets managers.
+- Configure CORS settings to prevent unauthorized cross-origin access.
+- Prevent insecure direct object references (IDOR): Do not allow users to access data just by guessing or providing an ID or filename. Always validate that the current user is authorized for the specific resource.
+  (For instance, if a URL has `?recordId=XYZ`, ensure the user has access to record XYZ before proceeding.)
+
+Example (Ensure proper authorization in an API endpoint - JavaScript Express):
+
+Bad:
+```js
+app.get(/admin, (req, res) => {
+    if (!req.user) {
+        return res.status(401).send(Unauthorized);
+    }
+    res.send(Admin panel);
+});
+```
+
+Good:
+```js
+app.get(/admin, (req, res) => {
+    if (!req.user || req.user.role !== admin) {
+        return res.status(403).send(Forbidden);
+    }
+    res.send(Admin panel);
+});
+```
+
+This ensures authentication alone does not grant access and that proper authorization checks are in place.
+
+### 4. Avoid sensitive data exposure
+
+- Encrypt all sensitive data, including passwords, personally identifiable information (PII), and credit card numbers, both at rest and in transit.
+- Remove unnecessary sensitive data from API responses.
+- Prevent logs from storing sensitive information like passwords, tokens, and credit card details.
+- Use generic error messages to avoid leaking implementation details.
+
+Example (Avoid exposing sensitive data in API responses - JavaScript Express):
+
+Bad:
+```js
+res.json({ username: user.username, password: user.password });
+```
+
+Good:
+```js
+res.json({ username: user.username });
+```
+
+### 5. Protect against security misconfiguration
+
+- Set appropriate security headers, including Content Security Policy (CSP), X-Frame-Options, and X-Content-Type-Options.
+- Disable debug mode in production environments.
+- Remove unused features, endpoints, and default credentials before deployment.
+- Avoid exposing detailed error messages that reveal stack traces or internal system details.
+
+Example (Express - Avoid exposing stack traces in production):
+
+Bad:
+```js
+app.use((err, req, res, next) => {
+  res.status(500).json({ error: err.stack });
+});
+```
+
+Good (Production Mode - Generic Error Message):
+```js
+app.use((err, req, res, next) => {
+  res.status(500).json({ error: Internal Server Error });
+});
+```
+
+- Store secrets in environment variables instead of source code.
+
+### 6. Validate and sanitize all data serialization
+
+- Avoid deserializing untrusted data to prevent remote code execution vulnerabilities.
+- Use safe serialization formats such as JSON or Protocol Buffers instead of direct object deserialization.
+- Enforce strict schema validation for incoming serialized data.
+- Define allowed properties explicitly to prevent mass assignment vulnerabilities.
+
+Example (Node.js - Prevent mass assignment in MongoDB Mongoose):
+
+Bad:
+```js
+const user = new User(req.body); // Users can set any field, including `isAdmin`
+```
+
+Good:
+```js
+const user = new User({
+  username: req.body.username,
+  email: req.body.email
+}); // Explicitly allow only certain fields
+```
+
+### 7. Implement secure logging and monitoring
+
+- Log security-related events such as authentication failures and access violations.
+- Exclude sensitive information such as passwords, API keys, and PII from logs.
+- Ensure logs are properly rotated and stored securely.
+- Actively monitor security logs for anomalies or suspicious activity.
+
+Example (Avoid logging sensitive data - Python Flask):
+
+Bad:
+```python
+app.logger.info(fUser {username} logged in with password {password})
+```
+
+Good:
+```python
+app.logger.info(fUser {username} attempted login)
+```
+
+### 8. Keep dependencies and libraries up to date
+
+- Pin dependencies to specific versions to prevent unexpected updates (e.g., using `package-lock.json`).
+- Remove unnecessary or unused dependencies.
+- Use only trusted sources for third-party libraries and packages.
+
+### 9. Prevent security issues in API and web requests
+
+- Implement rate limiting and request validation to prevent abuse.
+- Ensure all API endpoints enforce authentication and authorization.
+- Restrict HTTP methods, allowing only necessary ones such as GET and POST, and limiting PUT or DELETE as needed.
+- Configure CORS securely to prevent unauthorized cross-origin requests.
+- Use generic error messages to avoid leaking sensitive information.
+
+Example (Express - Rate limiting API requests with express-rate-limit):
+```js
+const rateLimit = require(express-rate-limit);
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // Limit each IP to 100 requests per window
+});
+app.use(/api/, limiter);
+```
+
+### 10. Protect against supply chain attacks
+
+- Verify the integrity of third-party libraries and dependencies before use.
+- Commit package manager lockfiles, such as `package-lock.json` or `Pipfile.lock`, to version control.
+- Scan container images for vulnerabilities before deployment.
+- Use signed code or cryptographic verification where applicable.
+```
