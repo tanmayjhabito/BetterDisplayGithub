@@ -1,0 +1,268 @@
+# Google TypeScript Style Guide
+
+### Variables and constants
+
+- Use `const` by default. Use `let` only when reassignment is needed. Never use `var`.
+- Declare one variable per statement.
+
+  Bad example:
+  ```ts
+  let a = 1, b = 2;
+  ```
+
+  Good example:
+  ```ts
+  let a = 1;
+  let b = 2;
+  ```
+
+- Do not use variables before their declaration.
+
+### Arrays and objects
+
+- Use `[]` syntax instead of `new Array()`.
+- Do not add custom properties to arrays.
+
+  Bad example:
+  ```ts
+  const arr = [1, 2, 3];
+  arr.customProp = "unexpected"; // Avoid
+  ```
+
+- Use spread syntax (`...`) for copying and merging.
+
+  Bad example:
+  ```ts
+  const arr1 = [1, 2];
+  const arr2 = arr1.concat(3, 4);
+  ```
+
+  Good example:
+  ```ts
+  const arr1 = [1, 2];
+  const arr2 = [...arr1, 3, 4];
+  ```
+
+- Use object literals (`{}`) instead of `new Object()`.
+
+  Bad example:
+  ```ts
+  const obj = new Object();
+  ```
+
+  Good example:
+  ```ts
+  const obj = {};
+  ```
+
+- Use object destructuring instead of accessing properties one by one.
+
+  Bad example:
+  ```ts
+  const user = { name: "Alice", age: 25 };
+  const name = user.name;
+  const age = user.age;
+  ```
+
+  Good example:
+  ```ts
+  const user = { name: "Alice", age: 25 };
+  const { name, age } = user;
+  ```
+
+### Functions and methods
+
+- Use function declarations over function expressions.
+
+  Bad example:
+  ```ts
+  const foo = function() {
+    return 42;
+  };
+  ```
+
+  Good example:
+  ```ts
+  function foo() {
+    return 42;
+  }
+  ```
+
+- Use arrow functions for concise callbacks.
+
+  Bad example:
+  ```ts
+  function logValues(values: number[]) {
+    values.forEach(function(value) {
+      console.log(value);
+    });
+  }
+  ```
+
+  Good example:
+  ```ts
+  function logValues(values: number[]) {
+    values.forEach(value => console.log(value));
+  }
+  ```
+
+### Event handlers
+
+- Use arrow functions when binding is not required.
+
+  Bad example:
+  ```ts
+  button.addEventListener("click", function() {
+    this.classList.add("clicked");
+  });
+  ```
+
+  Good example:
+  ```ts
+  button.addEventListener("click", () => {
+    button.classList.add("clicked");
+  });
+  ```
+
+### Classes and objects
+
+- Do not end class declarations with a semicolon.
+
+  Bad example:
+  ```ts
+  class Foo {};
+  ```
+
+- Use `readonly` for properties that do not change.
+
+  Bad example:
+  ```ts
+  class User {
+    name: string;
+    constructor(name: string) {
+      this.name = name;
+    }
+  }
+  ```
+
+  Good example:
+  ```ts
+  class User {
+    readonly name: string;
+    constructor(name: string) {
+      this.name = name;
+    }
+  }
+  ```
+
+### Constructors
+
+- Always use parentheses when calling constructors.
+
+  Good example:
+  ```ts
+  const x = new Foo();
+  ```
+
+- Use parameter properties in constructors.
+
+  Bad example:
+  ```ts
+  class User {
+    private name: string;
+    constructor(name: string) {
+      this.name = name;
+    }
+  }
+  ```
+
+  Good example:
+  ```ts
+  class User {
+    constructor(private readonly name: string) {}
+  }
+  ```
+
+### Type safety and assertions
+
+- Avoid `any` unless absolutely necessary.
+- Prefer `unknown` over `any` for unknown types.
+
+  Bad example:
+  ```ts
+  function process(value: any) {
+    console.log(value.toUpperCase());
+  }
+  ```
+
+  Good example:
+  ```ts
+  function process(value: unknown) {
+    if (typeof value === "string") {
+      console.log(value.toUpperCase());
+    }
+  }
+  ```
+
+### Enums
+
+- Use `enum` instead of `const enum`.
+
+  Bad example:
+  ```ts
+  const enum Status {
+    Ready,
+    Loading,
+    Error
+  }
+  ```
+
+  Good example:
+  ```ts
+  enum Status {
+    Ready,
+    Loading,
+    Error
+  }
+  ```
+
+### Control structures
+
+- Always use curly braces for control structures.
+
+  Bad example:
+  ```ts
+  if (x) doSomething();
+  ```
+
+  Good example:
+  ```ts
+  if (x) {
+    doSomething();
+  }
+  ```
+
+### Exception handling
+
+- Always use `new Error()` when throwing errors.
+
+### Type assertions and casting
+
+- Avoid unnecessary type assertions.
+- Use type annotations instead of assertions for object literals.
+
+  Bad example:
+  ```ts
+  const foo = { a: 1, b: 2 } as Foo;
+  ```
+
+  Good example:
+  ```ts
+  const foo: Foo = { a: 1, b: 2 };
+  ```
+
+### Miscellaneous best practices
+
+- Do not modify built-in prototypes.
+- Avoid `eval()` and `Function(...)`.
+- Use explicit semicolons.
