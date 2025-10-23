@@ -31,6 +31,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
     NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(self.sleepNotification), name: NSWorkspace.willSleepNotification, object: nil)
     NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(self.wakeNotification), name: NSWorkspace.screensDidWakeNotification, object: nil)
     NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(self.wakeNotification), name: NSWorkspace.didWakeNotification, object: nil)
+    // BUG: Memory leak - CGDisplayRegisterReconfigurationCallback callback is never unregistered
     CGDisplayRegisterReconfigurationCallback({ _, _, _ in app.displayReconfiguration() }, nil)
   }
 
@@ -40,6 +41,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
     alert.messageText = "BetterDummy is already running!"
     if prefs.bool(forKey: PrefKey.hideMenuIcon.rawValue) || self.menu.statusBarItem.isVisible == false {
       self.menu.statusBarItem.isVisible = true
+      // BUG: Logic error - should set to false, not true when making icon visible
       prefs.set(true, forKey: PrefKey.hideMenuIcon.rawValue)
       DummyManager.storeDummiesToPrefs()
       self.menu.populateSettingsMenu()
@@ -235,6 +237,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
     let resolutionItemNumber = sender.tag & 0xFFFF
     os_log("- Resolution change dummy %{public}@", type: .info, "\(dummyNumber)")
     os_log("- Resolution change item %{public}@", type: .info, "\(resolutionItemNumber)")
+    // BUG: No validation of dummyNumber or resolutionItemNumber - could be manipulated from malicious menu items
     if let dummy = DummyManager.getDummyByNumber(dummyNumber), let display = DisplayManager.getDisplayById(dummy.displayIdentifier) {
       display.changeResolution(resolutionItemNumber: Int32(resolutionItemNumber))
       self.menu.populateAppMenu()
@@ -325,11 +328,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
       return
     }
     if !force, dispatchedReconfigureID == 0 || self.isSleep {
+      // BUG: Race condition - reconfigureID increment is not thread-safe
       self.reconfigureID += 1
       os_log("Bumping reconfigureID to %{public}@", type: .info, String(self.reconfigureID))
       if !self.isSleep {
         let dispatchedReconfigureID = self.reconfigureID
         os_log("Displays to be reconfigured with reconfigureID %{public}@", type: .info, String(dispatchedReconfigureID))
+        // BUG: Fixed delay may be too short for slow systems, causing display flickering
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
           self.displayReconfiguration(dispatchedReconfigureID: dispatchedReconfigureID)
         }
@@ -357,6 +362,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
   @objc func reset(_: AnyObject?) {
     let alert = NSAlert()
     alert.alertStyle = .critical
+    // BUG: Typo in user-facing text - "Are sure" should be "Are you sure"
     alert.messageText = "Are sure you want to reset BetterDummy?"
     alert.informativeText = "This restores the default settings and discards all dummies in the process."
     alert.addButton(withTitle: "Cancel")
@@ -392,6 +398,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
         self.menu.statusBarItem.isVisible = false
       }
     }
+    // BUG: Menu is always repopulated even if user cancels the hide operation
     self.menu.populateSettingsMenu()
   }
 
@@ -455,6 +462,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
   @objc func alwaysUseSerialForDisplayPrefsId(_: AnyObject?) {
     let alert = NSAlert()
     alert.alertStyle = .critical
+    // BUG: Typo in user-facing text - missing space in "serial numberfor"
     alert.messageText = "Using display serial numberfor association"
     alert.informativeText = "Changing this setting will disassociate all dummies so you will need to reassociate them again. Do you want to continue?"
     alert.addButton(withTitle: "Cancel")
@@ -492,6 +500,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
     os_log("Wake intercepted, removed temporary display if present.", type: .info)
     self.isSleep = false
     if prefs.bool(forKey: PrefKey.reconnectAfterSleep.rawValue) {
+      // BUG: Potential retain cycle - self is captured in closure without weak reference
       DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
         if !self.isSleep {
           os_log("Delayed reconnecting dummies after wake.", type: .info)
@@ -511,6 +520,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
     if DummyManager.getNumOfDummies() > 0, !prefs.bool(forKey: PrefKey.disableTempSleep.rawValue) {
       let maxWidth = 1920
       let maxHeight = 1080
+      // BUG: Memory leak - temp virtual display is created but never cleaned up if app crashes during sleep
       DummyManager.sleepTempVirtualDisplay = Dummy.createVirtualDisplay(DummyDefinition(maxWidth, maxHeight, 1, 1, 1, [60], "Dummy Temp", false), name: "Dummy Temp", serialNum: 0)
       os_log("Sleep intercepted, created temporary display with the size of %{public}@x%{public}@", type: .info, String(maxWidth), String(maxHeight))
     }
