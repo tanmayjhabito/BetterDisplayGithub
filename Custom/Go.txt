@@ -1,0 +1,137 @@
+# Google Go code review checklist
+
+### Formatting & style
+- Use tabs for indentation, not spaces.
+- Keep lines under 100 characters.
+- Place package comments at the top of the file.
+- Group imports into three blocks:
+	1. Standard library
+	2. External packages
+	3. Internal packages
+
+### Naming conventions
+- Package and file naming: Use short, lowercase, single-word package names without underscores, and match the package name to its source directory; file names should be lowercase with underscores for multiple words.
+- Function and variable naming: Use camelCase, start exported names with uppercase, use ALL_CAPS with underscores for constants, and prefix boolean variables with `Is`, `Has`, `Can`, or `Allow`.
+- Use short, meaningful names, avoiding unnecessary abbreviations.
+
+  Bad example:
+  ```go
+  usrCnt := 10
+  ```
+
+  Good example:
+  ```go
+  userCount := 10
+  ```
+- For interfaces, prefer `Namer` over `NameInterface`.
+
+  Example:
+  ```go
+  type Reader interface {
+      Read(p []byte) (n int, err error)
+  }
+  ```
+
+### Functions & methods
+- Keep functions small and focused (aim for ≤ 50 lines).
+- Return zero values instead of `nil` where applicable.
+
+  Example:
+  ```go
+  func getNumbers() []int {
+      return []int{} // Instead of returning nil
+  }
+  ```
+
+- Use named return values only when they improve readability.
+- Avoid stuttering (e.g., package `foo` should not have `foo.FooMethod`).
+
+### Error handling
+- Return errors as values, not panics.
+- Use `errors.Is` / `errors.As` for error checking.
+- Wrap errors with `fmt.Errorf` when adding context.
+
+  Example:
+  ```go
+  if err != nil {
+      return fmt.Errorf('failed to open file: %w', err)
+  }
+  ```
+
+- When logging errors, always include context.
+
+### Comments & documentation
+- Write doc comments for all exported functions, structs, and interfaces.
+- Keep comments up to date—they should reflect the code’s behavior.
+- Use full sentences, starting with the function name.
+
+  Example:
+  ```go
+  // ParseConfig reads the config file and returns the configuration settings.
+  func ParseConfig(filename string) (Config, error) {
+      // Implementation...
+  }
+  ```
+
+### Concurrency & performance
+- Use goroutines only when necessary.
+- Always close channels when finished to prevent leaks.
+
+  Example:
+  ```go
+  ch := make(chan int)
+  go func() {
+      ch <- 42
+      close(ch)
+  }()
+  ```
+
+- Use `sync.WaitGroup` for managing multiple goroutines.
+- Avoid global state unless absolutely necessary.
+
+### Testing & validation
+- Use table-driven tests for cases with multiple inputs/outputs.
+
+  Example:
+  ```go
+  func TestAdd(t *testing.T) {
+      tests := []struct {
+          a, b, expected int
+      }{
+          {1, 2, 3},
+          {0, 5, 5},
+          {-1, -1, -2},
+      }
+
+      for _, tt := range tests {
+          result := Add(tt.a, tt.b)
+          if result != tt.expected {
+              t.Errorf('Add(%d, %d) = %d; want %d', tt.a, tt.b, result, tt.expected)
+          }
+      }
+  }
+  ```
+
+- Prefer test helpers for repetitive setup code.
+
+### Packages & imports
+- Use single-purpose packages—avoid mixing unrelated functionality.
+- Avoid importing unnecessary dependencies.
+- Use `internal/` for non-public package code.
+
+### Security & best practices
+- Use `context.Context` for request-scoped values.
+- Always handle errors, do not ignore them with `_`.
+
+  Bad example:
+  ```go
+  result, _ := someFunction()
+  ```
+
+  Good example:
+  ```go
+  result, err := someFunction()
+  if err != nil {
+      log.Fatalf('someFunction failed: %v', err)
+  }
+  ```
